@@ -3,6 +3,10 @@ import numpy as np
 from faker import Faker
 from datetime import datetime, timedelta
 import random
+import os
+
+DATA_TABLES = "data_tables" # this is the name of the folder where the data will be saved. 
+os.makedirs(DATA_TABLES, exist_ok=True) # create the folder if it doesn't exist
 
 fake = Faker()
 
@@ -64,7 +68,7 @@ END_DATE = datetime(2025,10,1,23,59,59)
 
 
 def random_date(start, end):
-    delta = end - start
+    delta = end - start # stores the duration between the start and end date as a timedelta object e.g delta = 365 days, 23:59:59
     random_days = random.randint(0, delta.days) # picking random days between the duratuion of start and end date
     days = start + timedelta(days=random_days) # land on a random date by adding the random days to the start date
     return days # return the randome date
@@ -123,7 +127,8 @@ def app_events(users_df: pd.DataFrame)-> pd.DataFrame:
 
     for _ in range(NUM_OF_EVENTS):
        
-       user = users_df.sample(1).iloc[0]
+       user = users_df.sample(1).iloc[0] # again, we need to pick a random user row from the users df to get user_id info 
+                                         # for the n times in NUM_OF_EVENTS. The selection can pick the same user multiple times.
 
        event = {
            'event_id': fake.uuid4(),
@@ -151,3 +156,41 @@ def generate_wallet_balance(users_df: pd.DataFrame) -> pd.DataFrame:
         }
         wallets.append(wallet)
     return pd.DataFrame(wallets)
+
+
+def save_to_csv(df: pd.DataFrame, tbl_name: str) -> None:
+   data_tbl_export = os.path.join(DATA_TABLES, tbl_name) # this will create a path to save the data. E.g data_tables/users.csv
+   df.to_csv(data_tbl_export, index=False)
+   print(f"'{tbl_name}' saved successfully to {data_tbl_export}")
+
+
+
+
+# Now we create functions to inject anolamies into the various data tables.
+
+def lower_caps_anomaly(df: pd.DataFrame, idx: list, field: str) -> pd.DataFrame:
+    df.loc[idx, field] = df.loc[idx, field].str.lower() # convert the values in the specified field to lowercase for the selected rows. 
+    return df
+
+def white_space_anomaly(df: pd.DataFrame, idx: list, field: str) -> pd.DataFrame:
+    df.loc[idx, field] = df.loc[idx, field].apply(lambda x: x + ' ' if pd.notnull(x) else x)
+    return df
+
+def null_value_anomaly(df: pd.DataFrame, idx: list, field: str) -> pd.DataFrame:
+    df.loc[idx, field] = np.nan # set the values in the specified field to null for the selected rows.
+    return df
+
+def inject_users_anomalies(df: pd.DataFrame) -> pd.DataFrame:
+    user_tbl = df.copy()
+    
+    lower_caps_idx = user_tbl.sample(frac=0.1, random_state=42).index # randomly select 10% of the rows to inject anomalies into. Setting random state to ensure reproducibility.
+    white_space_idx = user_tbl.sample(frac=0.11, random_state=7).index # randomly select 11% of the rows to inject anomalies into. Setting random state to ensure reproducibility. 
+    null_value_idx = user_tbl.sample(frac= 0.08, random_state = 10).index # randomly select 8% of the rows to inject anomalies into. Setting random state to ensure reproducibility.
+
+    anomaly_1 = lower_caps_anomaly(user_tbl, lower_caps_idx, 'country')
+    anomaly_2 = white_space_anomaly(user_tbl, white_space_idx, 'email')
+    anomaly_3 = null_value_anomaly(user_tbl, null_value_idx, 'plan')
+    anomaly_4 = lower_caps_anomaly(user_tbl, white_space_idx, 'country')
+
+    print(f"Injected anomalies into 'users' table: {len(lower_caps_anomaly)} lower caps, {len(white_space_anomaly)} white space, {len(null_value_anomaly)} null values.")
+    return user_tbl

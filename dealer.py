@@ -23,8 +23,8 @@ COUNTRY_WEIGHTS = [0.18, 0.10, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.04, 0.04, 0
 PLANS = ['basic', 'standard', 'premium']
 PLANS_WEIGHTS = [0.50, 0.30, 0.20]
 
-DEVICE_TYPES = ['iOS', 'Android']
-DEVICE_TYPE_WEIGHTS = [60, 40]
+DEVICE_TYPES = ['iOS', 'Android', 'Web']
+DEVICE_TYPE_WEIGHTS = [45, 35, 20]
 
 ACCOUNT_STATUSES = ['active', 'churned', 'suspended']
 ACCOUNT_STATUS_WEIGHTS = [0.70, 0.20, 0.10]
@@ -129,12 +129,13 @@ def app_events(users_df: pd.DataFrame)-> pd.DataFrame:
        
        user = users_df.sample(1).iloc[0] # again, we need to pick a random user row from the users df to get user_id info 
                                          # for the n times in NUM_OF_EVENTS. The selection can pick the same user multiple times.
+       platform = ['mobile' if user['device_type'] in ['iOS', 'Android'] else 'web'][0] # determine the platform type based on the user's device type. If device type is iOS or Android, platform is mobile, otherwise it's web.
 
        event = {
            'event_id': fake.uuid4(),
            'user_id': user['user_id'], # get a random user id from the users dataframe
            'event_type': random.choices(EVENT_TYPES, weights=EVENT_TYPE_WEIGHTS, k=1)[0],
-           'platform_type': random.choices(PLATFORM_TYPES, weights=PLATFORM_TYPE_WEIGHTS, k=1)[0],
+           'platform_type': platform,
            'event_timestamp': random_date(START_DATE, END_DATE),
            'device_type': user['device_type'] # get the device type of the user from the users dataframe
        }
@@ -167,7 +168,6 @@ def save_to_csv(df: pd.DataFrame, tbl_name: str) -> None:
 
 
 # Now we create functions to inject anolamies into the various data tables.
-
 def lower_caps_anomaly(df: pd.DataFrame, idx: list, field: str) -> pd.DataFrame:
     df.loc[idx, field] = df.loc[idx, field].str.lower() # convert the values in the specified field to lowercase for the selected rows. 
     return df
@@ -180,17 +180,44 @@ def null_value_anomaly(df: pd.DataFrame, idx: list, field: str) -> pd.DataFrame:
     df.loc[idx, field] = np.nan # set the values in the specified field to null for the selected rows.
     return df
 
+def inject_string_anomaly(df: pd.DataFrame, idx: list, field: str) -> pd.DataFrame:
+    df[field] = df[field].astype(object) # convert the field to object type to allow for string values
+    df.loc[idx, field] = df.loc[idx, field].apply(lambda x: str(x))
+    return df
+
 def inject_users_anomalies(df: pd.DataFrame) -> pd.DataFrame:
     user_tbl = df.copy()
     
-    lower_caps_idx = user_tbl.sample(frac=0.1, random_state=42).index # randomly select 10% of the rows to inject anomalies into. Setting random state to ensure reproducibility.
+    #I need a way to collect the indexes of rows i want to inject the anomalies into. Stores them into a list.
+    lower_caps_idx = user_tbl.sample(frac=0.18, random_state=42).index # randomly select 10% of the rows to inject anomalies into. Setting random state to ensure reproducibility.
     white_space_idx = user_tbl.sample(frac=0.11, random_state=7).index # randomly select 11% of the rows to inject anomalies into. Setting random state to ensure reproducibility. 
     null_value_idx = user_tbl.sample(frac= 0.08, random_state = 10).index # randomly select 8% of the rows to inject anomalies into. Setting random state to ensure reproducibility.
 
-    anomaly_1 = lower_caps_anomaly(user_tbl, lower_caps_idx, 'country')
-    anomaly_2 = white_space_anomaly(user_tbl, white_space_idx, 'email')
-    anomaly_3 = null_value_anomaly(user_tbl, null_value_idx, 'plan')
-    anomaly_4 = lower_caps_anomaly(user_tbl, white_space_idx, 'country')
+    user_tbl = lower_caps_anomaly(user_tbl, lower_caps_idx, 'country')
+    # user_tbl = user_tbl.iloc[idx, 'country'] = user_tbl.iloc[idx]['country'].str.lower() # without he helper function
+    user_tbl = white_space_anomaly(user_tbl, white_space_idx, 'email')
+    user_tbl = null_value_anomaly(user_tbl, null_value_idx, 'email')
+    user_tbl = null_value_anomaly(user_tbl, null_value_idx, 'plan')
+    user_tbl = null_value_anomaly(user_tbl, null_value_idx, 'country')
+    user_tbl = white_space_anomaly(user_tbl, white_space_idx, 'first_name')
+    user_tbl = lower_caps_anomaly(user_tbl, lower_caps_idx, 'last_name')
+    user_tbl = null_value_anomaly(user_tbl, null_value_idx, 'last_name')
+    
 
-    print(f"Injected anomalies into 'users' table: {len(lower_caps_anomaly)} lower caps, {len(white_space_anomaly)} white space, {len(null_value_anomaly)} null values.")
+
+    print(f"Injected anomalies into: {user_tbl.shape[0]} rows.")
     return user_tbl
+
+def inject_transactions_anomalies(df: pd.DataFrame) -> pd.DataFrame:
+
+    txn_tbl = df.copy() 
+
+    convert_str_idx = txn_tbl.sample(frac= 0.25, random_state=15).index
+    null_values_idx = txn_tbl.sample(frac=0.18, random_state=25).index
+
+    txn_tbl = inject_string_anomaly(txn_tbl, convert_str_idx, 'amount')
+    txn_tbl = null_value_anomaly(txn_tbl, null_values_idx, 'currency_rate')
+    txn_tbl = null_value_anomaly(txn_tbl, null_values_idx, 'transaction_status')
+
+    print(f"Injected anomalies into: {txn_tbl.shape[0]} rows.")
+    return txn_tbl

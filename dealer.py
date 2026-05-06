@@ -159,12 +159,6 @@ def generate_wallet_balance(users_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(wallets)
 
 
-def save_to_csv(df: pd.DataFrame, tbl_name: str) -> None:
-   data_tbl_export = os.path.join(DATA_TABLES, tbl_name) # this will create a path to save the data. E.g data_tables/users.csv
-   df.to_csv(data_tbl_export, index=False)
-   print(f"'{tbl_name}' saved successfully to {data_tbl_export}")
-
-
 
 
 # Now we create functions to inject anolamies into the various data tables.
@@ -202,8 +196,6 @@ def inject_users_anomalies(df: pd.DataFrame) -> pd.DataFrame:
     user_tbl = white_space_anomaly(user_tbl, white_space_idx, 'first_name')
     user_tbl = lower_caps_anomaly(user_tbl, lower_caps_idx, 'last_name')
     user_tbl = null_value_anomaly(user_tbl, null_value_idx, 'last_name')
-    
-
 
     print(f"Injected anomalies into: {user_tbl.shape[0]} rows.")
     return user_tbl
@@ -221,3 +213,51 @@ def inject_transactions_anomalies(df: pd.DataFrame) -> pd.DataFrame:
 
     print(f"Injected anomalies into: {txn_tbl.shape[0]} rows.")
     return txn_tbl
+
+
+def inject_app_event_anomalies(users_tbl: pd.DataFrame, events_tbl: pd.DataFrame) -> pd.DataFrame:
+    evnt_tbl = events_tbl.copy()
+
+    # need to merge to bring in created_at so that I can compare with timestamp.
+    evnt_tbl = evnt_tbl.merge(users_tbl[['user_id', 'created_at']], on = 'user_id', how = 'left') 
+
+    # We get random rows reom the table we want to infect
+    null_platform_idx = evnt_tbl.sample(frac= 0.22, random_state=35).index
+    irreg_time_stamp_idx = evnt_tbl.sample(frac=0.15, random_state=45).index
+
+    # we get random numbers in plac of days we would subtract reom event_timestamp
+    rndm_days = [random.randint(1, 30) for _ in range(len(irreg_time_stamp_idx))] # generate random number of days to add to the created_at date to create irregular timestamps.
+
+    # for all the dates picked, replace them with a subtraction of random days that we created. Thois would create irregular timestamps that are before the user's created_at date.
+    evnt_tbl.loc[irreg_time_stamp_idx, 'event_timestamp'] = evnt_tbl.loc[irreg_time_stamp_idx, 'created_at'] - pd.to_timedelta(rndm_days, unit = 'D') 
+
+    # drop the created_at column as we no longer need it after creating the irregular timestamps.
+    evnt_tbl = evnt_tbl.drop(columns=['created_at']) 
+
+    # now to apply the null platform type anomaly to the selected rows.
+    evnt_tbl = null_value_anomaly(evnt_tbl, null_platform_idx, 'platform_type')
+    print(f"Anomalies successfully injected into: {evnt_tbl.shape[0]} rows.")
+
+    return evnt_tbl
+
+
+def inject_wallet_anomalies(df: pd.DataFrame) -> pd.DataFrame:
+    wallet_tb = df.copy()
+
+    negative_balance_idx = wallet_tb.sample(frac=0.34, random_state=55).index
+    null_currencies_idx = wallet_tb.sample(frac=0.20, random_state=65).index
+
+    # make the balance negative for the selected rows.
+    wallet_tb.loc[negative_balance_idx, 'balance'] = wallet_tb.loc[negative_balance_idx, 'balance'] * -1 # make the balance negative for the selected rows.
+
+    # inject null currency anomaly for the selected rows.
+    wallet_tb = null_value_anomaly(wallet_tb, null_currencies_idx, 'currency')
+    print(f"Anomalies successfully injected into: {wallet_tb.shape[0]} rows.")
+    return wallet_tb
+
+
+
+def save_to_csv(df: pd.DataFrame, tbl_name: str) -> None:
+   data_tbl_export = os.path.join(DATA_TABLES, tbl_name) # this will create a path to save the data. E.g data_tables/users.csv
+   df.to_csv(data_tbl_export, index=False)
+   print(f"'{tbl_name}' saved successfully to {data_tbl_export}")

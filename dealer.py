@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import random
 import os
 
+random.seed(42) # This ensures that the same random values are generated each time the code is run, which is important for testing and debugging purposes. 
+
 DATA_TABLES = "data_tables" # this is the name of the folder where the data will be saved. 
 os.makedirs(DATA_TABLES, exist_ok=True) # create the folder if it doesn't exist
 
@@ -12,8 +14,9 @@ fake = Faker()
 
 # Constants for USERS TABLE generation
 NUM_OF_USERS = 1800
-
 NUM_OF_TRANSACTIONS = 10000
+NUM_OF_EVENTS = 5000
+
 
 COUNTRIES = ['USA', 'UK', 'Germany', 'France', 'Italy', 'Spain', 'Australia', 'Canada', 'Brazil', 'India', 'Nigeria',
              'Kenya', 'South Africa', 'Egypt', 'Morocco', 'Algeria', 'Tunisia', 'Ghana', 'Uganda',  'Portugal']
@@ -54,7 +57,6 @@ CURRENCY_RATES = {
 }
 
 # Constants for APP_EVENTS TABLE generation
-NUM_OF_EVENTS = 5000
 
 EVENT_TYPES = ['login', 'logout', 'check_balance', 'send_money', 'receive_money', 'update_profile', 'kyc_submitted', 'failed_login']
 EVENT_TYPE_WEIGHTS = [20, 15, 25, 15, 10, 5, 5, 5]
@@ -197,7 +199,7 @@ def inject_users_anomalies(df: pd.DataFrame) -> pd.DataFrame:
     user_tbl = lower_caps_anomaly(user_tbl, lower_caps_idx, 'last_name')
     user_tbl = null_value_anomaly(user_tbl, null_value_idx, 'last_name')
 
-    print(f"Injected anomalies into: {user_tbl.shape[0]} rows.")
+    print(f"Anomalies successfully injected into: {user_tbl.shape[0]} rows.")
     return user_tbl
 
 def inject_transactions_anomalies(df: pd.DataFrame) -> pd.DataFrame:
@@ -211,7 +213,7 @@ def inject_transactions_anomalies(df: pd.DataFrame) -> pd.DataFrame:
     txn_tbl = null_value_anomaly(txn_tbl, null_values_idx, 'currency_rate')
     txn_tbl = null_value_anomaly(txn_tbl, null_values_idx, 'transaction_status')
 
-    print(f"Injected anomalies into: {txn_tbl.shape[0]} rows.")
+    print(f"Anomalies successfully injected into: {txn_tbl.shape[0]} rows.")
     return txn_tbl
 
 
@@ -258,6 +260,6 @@ def inject_wallet_anomalies(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_to_csv(df: pd.DataFrame, tbl_name: str) -> None:
-   data_tbl_export = os.path.join(DATA_TABLES, tbl_name) # this will create a path to save the data. E.g data_tables/users.csv
+   data_tbl_export = os.path.join(DATA_TABLES, f'{tbl_name}.csv') # this will create a path to save the data. E.g data_tables/users.csv
    df.to_csv(data_tbl_export, index=False)
    print(f"'{tbl_name}' saved successfully to {data_tbl_export}")

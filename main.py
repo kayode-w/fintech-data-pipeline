@@ -1,20 +1,54 @@
-from dealer import generate_users, generate_transactions, app_events, generate_wallet_balance, inject_transactions_anomalies, inject_users_anomalies, inject_app_event_anomalies, inject_wallet_anomalies, save_to_csv
+from dealer import generate_users, generate_transactions, app_events, generate_wallet_balance, inject_transactions_anomalies, inject_users_anomalies, inject_app_event_anomalies, inject_wallet_anomalies, save_to_csv  
+from pipeline import table_extraction, name_proper_case, transform_users
 
 
+# Generate the data for the tables
 
 users = generate_users()
 transactions = generate_transactions(users)
 events = app_events(users)
 wallet_balance = generate_wallet_balance(users)
 
+
+# Inject the anomalies into the generated data
 users_2 = inject_users_anomalies(users)
 transactions_2 = inject_transactions_anomalies(transactions)
-# print(transactions_2.loc[transactions_2['amount'].apply(lambda x: isinstance(x, str()))].head())
 events_2 = inject_app_event_anomalies(users, events)
 wallet_balance_2 = inject_wallet_anomalies(wallet_balance)
+# print(transactions_2.loc[transactions_2['amount'].apply(lambda x: isinstance(x, str()))].head())
+
+# Export the generated data to CSV files
+
+save_to_csv(users_2, 'users')
+save_to_csv(transactions_2, 'transactions')
+save_to_csv(events_2, 'app_events')
+save_to_csv(wallet_balance_2, 'wallet_balances')
+
+# Extract the data from the CSV files and load it into pandas DataFrames
+
+users_df = table_extraction('users')
+transactions_df = table_extraction('transactions')
+events_df = table_extraction('app_events')
+wallet_balance_df = table_extraction('wallet_balances')
 
 
-save_to_csv(users_2, 'users.csv')
-save_to_csv(transactions_2, 'transactions.csv')
-save_to_csv(events_2, 'app_events.csv')
-save_to_csv(wallet_balance_2, 'wallet_balances.csv')
+users_df = transform_users(users_df)
+
+# print(users_df.head())
+
+print(transactions_df.head())
+
+
+
+
+
+members = ['kay', 'tolu', 'susan', 'michael', 'john', 'jane']
+
+
+def capitalize_and_append_OJO(expected: list):
+
+    new_array = []
+    for each in array:
+        new_members.append(each.capitalize() + " " + 'OJO')
+    return new_members
+

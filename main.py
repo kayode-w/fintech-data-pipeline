@@ -1,5 +1,5 @@
 from dealer import generate_users, generate_transactions, app_events, generate_wallet_balance, inject_transactions_anomalies, inject_users_anomalies, inject_app_event_anomalies, inject_wallet_anomalies, save_to_csv  
-from pipeline import table_extraction, name_proper_case, transform_users
+from pipeline import table_extraction, name_proper_case, transform_app_events, transform_users, transform_transactions, transform_wallets
 
 
 # Generate the data for the tables
@@ -33,22 +33,17 @@ wallet_balance_df = table_extraction('wallet_balances')
 
 
 users_df = transform_users(users_df)
-
-# print(users_df.head())
-
-print(transactions_df.head())
-
+transactions_df = transform_transactions(transactions_df, users_df )
+wallets_df = transform_wallets(wallet_balance_df, users_df)
+app_events_df = transform_app_events(events_df, users_df)
 
 
 
+print(app_events_df.head(10))
 
-members = ['kay', 'tolu', 'susan', 'michael', 'john', 'jane']
+# print(wallets_df.loc[wallets_df['currency'].isnull()])
+
+# print(users_df.loc[users_df['country'].isnull(), 'country'])
 
 
-def capitalize_and_append_OJO(expected: list):
-
-    new_array = []
-    for each in array:
-        new_members.append(each.capitalize() + " " + 'OJO')
-    return new_members
 

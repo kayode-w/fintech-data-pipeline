@@ -5,3 +5,9 @@ __pycache__/
 .env
 *.ipynb
 .ipynb_checkpoints/
+aws_creds.csv
+.env
+*.env
+.aws/
+*.pem
+*.key

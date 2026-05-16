@@ -124,6 +124,7 @@ def generate_transactions(users_df: pd.DataFrame)-> pd.DataFrame:
         transactions.append(transaction)
     return pd.DataFrame(transactions)
 
+
 def app_events(users_df: pd.DataFrame)-> pd.DataFrame:
     events = []
 
@@ -164,6 +165,7 @@ def generate_wallet_balance(users_df: pd.DataFrame) -> pd.DataFrame:
 
 
 # Now we create functions to inject anolamies into the various data tables.
+
 def lower_caps_anomaly(df: pd.DataFrame, idx: list, field: str) -> pd.DataFrame:
     df.loc[idx, field] = df.loc[idx, field].str.lower() # convert the values in the specified field to lowercase for the selected rows. 
     return df

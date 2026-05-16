@@ -1,6 +1,7 @@
 from dealer import generate_users, generate_transactions, app_events, generate_wallet_balance, inject_transactions_anomalies, inject_users_anomalies, inject_app_event_anomalies, inject_wallet_anomalies, save_to_csv  
 from pipeline import table_extraction, name_proper_case, transform_app_events, transform_users, transform_transactions, transform_wallets
-
+from loader import load_sql, engine
+from datetime import datetime, timedelta
 
 # Generate the data for the tables
 
@@ -38,8 +39,19 @@ wallets_df = transform_wallets(wallet_balance_df, users_df)
 app_events_df = transform_app_events(events_df, users_df)
 
 
+D_TABLES = {
+    'users':  users_df,
+    'transactions': transactions_df,
+    'events': app_events_df,
+    'wallet_balance': wallets_df
+}
 
-print(app_events_df.head(10))
+for table_name, df in D_TABLES.items():
+    load_sql(df, table_name, engine)
+
+
+
+# print(app_events_df.head(10))
 
 # print(wallets_df.loc[wallets_df['currency'].isnull()])
 

@@ -90,7 +90,7 @@ def currency_conversion(df: pd.DataFrame, rate: str, local_amt: str) -> pd.DataF
         raise ValueError(f'Column {local_amt} does not exist in the dataframe.')
 
     try:
-        df[rate] = pd.to_numeric(df[rate], errors = 'coerce') # use this to 
+        df[rate] = pd.to_numeric(df[rate], errors = 'coerce') # use this to convert to a numeric value
         df[local_amt] = pd.to_numeric(df[local_amt], errors = 'coerce')
         df['converted_amount'] = df[local_amt] * df[rate]
     except Exception as e:
@@ -106,6 +106,7 @@ def currency_lookup(txn_df: pd.DataFrame, users_df: pd.DataFrame):
     # lookup:  where the currency rate is null, use the country field as a key to look up matching values on the currency_map dict
     df.loc[df['currency'].isnull(), 'currency'] = df.loc[df['currency'].isnull(), 'country'].map(CURRENCY_MAP)
     df.loc[df['currency_rate'].isnull(), 'currency_rate'] = df.loc[df['currency_rate'].isnull(), 'currency'].map(CURRENCY_RATES)
+    
 
     df.drop(columns= 'country', inplace = True)
     return df
@@ -185,7 +186,7 @@ def inaccurate_time(app_events: pd.DataFrame, users_df: pd.DataFrame) -> pd.Data
 
         df['irregularity_flag'] = ['irregular_timelapse' if x < -set_boundary else 'regular_timelapse'  for x in df['timelapse']]
 
-        df.drop(columns = ['created_at'], inplace = True)
+        df.drop(columns = ['created_at', 'timelapse'], inplace = True)
 
         return df
 
